@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDropzone } from 'react-dropzone';
+import { Badge } from "@/components/ui/badge";
 
 const FileUpload = ({ onFileUpload }) => {
   const onDrop = useCallback((acceptedFiles) => {
@@ -40,6 +41,7 @@ const Index = () => {
   const [matchScore, setMatchScore] = useState(0);
   const [suggestions, setSuggestions] = useState([]);
   const [error, setError] = useState('');
+  const [keywords, setKeywords] = useState([]);
 
   const handleResumeChange = (e) => setResume(e.target.value);
   const handleJobDescriptionChange = (e) => setJobDescription(e.target.value);
@@ -61,11 +63,15 @@ const Index = () => {
       "Quantify your achievements with specific metrics",
       "Use action verbs to describe your experiences"
     ]);
+    setKeywords(["JavaScript", "React", "Node.js", "API", "Agile"]);
   };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">ATS-Friendly Resume Optimizer</h1>
+      <header className="text-center mb-8">
+        <h1 className="text-4xl font-bold mb-2">ATS-Friendly Resume Optimizer</h1>
+        <p className="text-xl text-muted-foreground">Improve your resume's chances of passing Applicant Tracking Systems</p>
+      </header>
       
       <Card className="mb-6">
         <CardHeader>
@@ -125,7 +131,7 @@ const Index = () => {
             </Tabs>
           </CardContent>
           <CardFooter>
-            <Button onClick={analyzeResume} className="w-full">Analyze and Optimize</Button>
+            <Button onClick={analyzeResume} className="w-full">Compare and Optimize</Button>
           </CardFooter>
         </Card>
 
@@ -143,7 +149,15 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground mt-1">{matchScore}% match with job description</p>
                 </div>
                 <div className="mb-4">
-                  <Label>Suggestions</Label>
+                  <Label>Keyword Suggestions</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {keywords.map((keyword, index) => (
+                      <Badge key={index} variant="secondary">{keyword}</Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <Label>Improvement Suggestions</Label>
                   <ul className="list-disc list-inside text-sm text-muted-foreground mt-2">
                     {suggestions.map((suggestion, index) => (
                       <li key={index}>{suggestion}</li>
@@ -158,7 +172,7 @@ const Index = () => {
                 </div>
               </>
             ) : (
-              <p className="text-center text-muted-foreground">Upload a resume and job description, then click "Analyze and Optimize" to see results.</p>
+              <p className="text-center text-muted-foreground">Upload a resume and job description, then click "Compare and Optimize" to see results.</p>
             )}
           </CardContent>
         </Card>
