@@ -66,6 +66,25 @@ const Index = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6 text-center">ATS-Friendly Resume Optimizer</h1>
+      
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>How It Works</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Upload or paste your resume in the "Resume" tab.</li>
+            <li>Paste the job description in the "Job Description" tab.</li>
+            <li>Click "Analyze and Optimize" to process your resume.</li>
+            <li>Review the match score, suggestions, and optimized resume.</li>
+            <li>Use the optimized version to improve your chances with ATS systems.</li>
+          </ol>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Our tool analyzes your resume against the job description, identifying key terms and suggesting improvements to increase your chances of passing Applicant Tracking Systems (ATS).
+          </p>
+        </CardContent>
+      </Card>
+
       {error && (
         <Alert variant="destructive" className="mb-6">
           <AlertTitle>Error</AlertTitle>
