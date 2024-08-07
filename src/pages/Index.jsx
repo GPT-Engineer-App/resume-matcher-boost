@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDropzone } from 'react-dropzone';
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 const FileUpload = ({ onFileUpload }) => {
   const onDrop = useCallback((acceptedFiles) => {
@@ -42,10 +45,34 @@ const Index = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [error, setError] = useState('');
   const [keywords, setKeywords] = useState([]);
+  const [savedResumes, setSavedResumes] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [missingSkills, setMissingSkills] = useState([]);
+  const [aiSuggestions, setAiSuggestions] = useState({});
 
   const handleResumeChange = (e) => setResume(e.target.value);
   const handleJobDescriptionChange = (e) => setJobDescription(e.target.value);
   const handleFileUpload = (content) => setResume(content);
+
+  const saveResume = () => {
+    const newSavedResume = { id: Date.now(), name: `Resume ${savedResumes.length + 1}`, content: adjustedResume };
+    setSavedResumes([...savedResumes, newSavedResume]);
+    localStorage.setItem('savedResumes', JSON.stringify([...savedResumes, newSavedResume]));
+  };
+
+  const loadResume = (id) => {
+    const loadedResume = savedResumes.find(resume => resume.id === id);
+    if (loadedResume) {
+      setResume(loadedResume.content);
+    }
+  };
+
+  useEffect(() => {
+    const storedResumes = localStorage.getItem('savedResumes');
+    if (storedResumes) {
+      setSavedResumes(JSON.parse(storedResumes));
+    }
+  }, []);
 
   const analyzeResume = () => {
     if (!resume || !jobDescription) {
@@ -54,16 +81,73 @@ const Index = () => {
     }
     setError('');
 
-    // This is where we'd implement the actual resume analysis and adjustment logic
-    // For now, we'll just set some dummy data
-    setAdjustedResume(resume + "\n\nAdjusted for ATS optimization");
-    setMatchScore(75);
+    // Extract keywords from job description
+    const jobKeywords = jobDescription.toLowerCase().match(/\b\w+\b/g) || [];
+    const uniqueJobKeywords = [...new Set(jobKeywords)];
+
+    // Find matching keywords in resume
+    const matchingKeywords = uniqueJobKeywords.filter(keyword => 
+      resume.toLowerCase().includes(keyword)
+    );
+
+    setKeywords(matchingKeywords);
+
+    // Highlight matching keywords in resume
+    let highlightedResume = resume;
+    matchingKeywords.forEach(keyword => {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      highlightedResume = highlightedResume.replace(regex, match => 
+        `<span class="bg-green-200">${match}</span>`
+      );
+    });
+
+    setAdjustedResume(highlightedResume);
+    setMatchScore(Math.round((matchingKeywords.length / uniqueJobKeywords.length) * 100));
+
+    // Identify missing skills
+    const missingSkills = uniqueJobKeywords.filter(keyword => 
+      !resume.toLowerCase().includes(keyword)
+    );
+    setMissingSkills(missingSkills);
+
     setSuggestions([
       "Add more keywords related to the job description",
       "Quantify your achievements with specific metrics",
       "Use action verbs to describe your experiences"
     ]);
-    setKeywords(["JavaScript", "React", "Node.js", "API", "Agile"]);
+
+    // AI-powered rewriting suggestions (placeholder)
+    setAiSuggestions({
+      summary: "Consider rephrasing your summary to highlight your most relevant skills.",
+      experience: "Try to quantify your achievements in each role with specific metrics.",
+      skills: "Add some of the missing skills identified in the analysis."
+    });
+  };
+
+  const exportResume = (format) => {
+    let content = adjustedResume;
+    let mimeType = 'text/plain';
+    let fileExtension = 'txt';
+
+    if (format === 'pdf') {
+      // For PDF, we'd typically use a library like jsPDF
+      // This is a placeholder for the concept
+      mimeType = 'application/pdf';
+      fileExtension = 'pdf';
+    } else if (format === 'docx') {
+      // For DOCX, we'd typically use a library like docx
+      // This is a placeholder for the concept
+      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      fileExtension = 'docx';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `optimized_resume.${fileExtension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -112,6 +196,16 @@ const Index = () => {
               <TabsContent value="resume">
                 <div className="space-y-4">
                   <FileUpload onFileUpload={handleFileUpload} />
+                  <Select onValueChange={setSelectedTemplate}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="chronological">Chronological</SelectItem>
+                      <SelectItem value="functional">Functional</SelectItem>
+                      <SelectItem value="combination">Combination</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Textarea
                     placeholder="Or paste your resume here"
                     className="min-h-[200px]"
@@ -157,18 +251,31 @@ const Index = () => {
                   </div>
                 </div>
                 <div className="mb-4">
-                  <Label>Improvement Suggestions</Label>
+                  <Label>Skill Gap Analysis</Label>
                   <ul className="list-disc list-inside text-sm text-muted-foreground mt-2">
-                    {suggestions.map((suggestion, index) => (
-                      <li key={index}>{suggestion}</li>
+                    {missingSkills.map((skill, index) => (
+                      <li key={index}>Consider adding: {skill}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="mb-4">
+                  <Label>AI-Powered Improvement Suggestions</Label>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground mt-2">
+                    {Object.entries(aiSuggestions).map(([section, suggestion], index) => (
+                      <li key={index}><strong>{section}:</strong> {suggestion}</li>
                     ))}
                   </ul>
                 </div>
                 <div>
                   <Label>Optimized Resume</Label>
                   <ScrollArea className="h-[200px] mt-2 p-4 border rounded-md">
-                    <pre className="text-sm whitespace-pre-wrap">{adjustedResume}</pre>
+                    <div className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: adjustedResume }} />
                   </ScrollArea>
+                </div>
+                <div className="mt-4 space-x-2">
+                  <Button onClick={() => exportResume('txt')}>Export as TXT</Button>
+                  <Button onClick={() => exportResume('pdf')}>Export as PDF</Button>
+                  <Button onClick={() => exportResume('docx')}>Export as DOCX</Button>
                 </div>
               </>
             ) : (
@@ -177,6 +284,41 @@ const Index = () => {
           </CardContent>
         </Card>
       </div>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button className="mt-4">Save/Load Resume</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Save or Load Resume</DialogTitle>
+            <DialogDescription>
+              Save your current resume or load a previously saved one.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input id="name" value={`Resume ${savedResumes.length + 1}`} className="col-span-3" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={saveResume}>Save Current Resume</Button>
+          </DialogFooter>
+          <div className="mt-4">
+            <Label>Saved Resumes</Label>
+            <ScrollArea className="h-[200px] w-full border rounded-md p-4">
+              {savedResumes.map((savedResume) => (
+                <div key={savedResume.id} className="flex justify-between items-center mb-2">
+                  <span>{savedResume.name}</span>
+                  <Button onClick={() => loadResume(savedResume.id)}>Load</Button>
+                </div>
+              ))}
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
