@@ -1,4 +1,7 @@
-const generateCoverLetter = async () => {
+import React from 'react';
+
+const Index = () => {
+  const generateCoverLetter = async () => {
   if (!resume || !jobDescription || !companyWebsite) {
     setError('Please provide a resume, job description, and company website to generate a cover letter.');
     return;
@@ -78,3 +81,13 @@ const generateClosingParagraph = (companyName) => {
   // Implement logic to generate a closing paragraph
   return `I am excited about the possibility of joining ${companyName} and would welcome the opportunity to discuss how my skills and experiences align with your needs. Thank you for your consideration, and I look forward to speaking with you soon.`;
 };
+
+  return (
+    <div>
+      <h1>Cover Letter Generator</h1>
+      {/* Add your UI components here */}
+    </div>
+  );
+};
+
+export default Index;
