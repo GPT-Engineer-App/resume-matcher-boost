@@ -195,7 +195,7 @@ ${name}
               readOnly
               className="mt-1 h-64"
             />
-          </Content>
+          </CardContent>
         </Card>
       )}
     </div>
