@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import axios from 'axios';
+import { jsPDF } from "jspdf";
+import { saveAs } from 'file-saver';
+import { Document, Packer, Paragraph, TextRun } from "docx";
 
 const Index = () => {
   const [resume, setResume] = useState('');
@@ -13,6 +17,17 @@ const Index = () => {
   const [error, setError] = useState('');
   const [matchPercentage, setMatchPercentage] = useState(null);
   const [missingKeywords, setMissingKeywords] = useState([]);
+  const [highlightedResume, setHighlightedResume] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [optimizedResume, setOptimizedResume] = useState('');
+  const [skillGap, setSkillGap] = useState([]);
+
+  useEffect(() => {
+    if (resume && jobDescription) {
+      highlightKeywords();
+      performSkillGapAnalysis();
+    }
+  }, [resume, jobDescription]);
 
   const analyzeResume = () => {
     if (!resume || !jobDescription) {
@@ -21,27 +36,75 @@ const Index = () => {
     }
     setError('');
 
-    // Extract keywords from job description
     const jobKeywords = extractKeywords(jobDescription);
-
-    // Extract keywords from resume
     const resumeKeywords = extractKeywords(resume);
 
-    // Calculate match percentage
     const matchedKeywords = jobKeywords.filter(keyword => resumeKeywords.includes(keyword));
     const percentage = (matchedKeywords.length / jobKeywords.length) * 100;
     setMatchPercentage(percentage.toFixed(2));
 
-    // Identify missing keywords
     const missing = jobKeywords.filter(keyword => !resumeKeywords.includes(keyword));
     setMissingKeywords(missing);
+
+    optimizeResume();
   };
 
   const extractKeywords = (text) => {
-    // Simple keyword extraction (you might want to use a more sophisticated method)
     const words = text.toLowerCase().match(/\b(\w+)\b/g);
-    const keywords = [...new Set(words)]; // Remove duplicates
-    return keywords.filter(word => word.length > 3); // Filter out short words
+    const keywords = [...new Set(words)];
+    return keywords.filter(word => word.length > 3);
+  };
+
+  const highlightKeywords = () => {
+    const jobKeywords = extractKeywords(jobDescription);
+    let highlightedText = resume;
+
+    jobKeywords.forEach(keyword => {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      highlightedText = highlightedText.replace(regex, match => `<span style="background-color: lightgreen;">${match}</span>`);
+    });
+
+    setHighlightedResume(highlightedText);
+  };
+
+  const performSkillGapAnalysis = () => {
+    const jobSkills = extractSkills(jobDescription);
+    const resumeSkills = extractSkills(resume);
+
+    const missingSkills = jobSkills.filter(skill => !resumeSkills.includes(skill));
+    setSkillGap(missingSkills);
+  };
+
+  const extractSkills = (text) => {
+    // This is a simplified skill extraction. In a real-world scenario, you'd use a more sophisticated NLP approach.
+    const skillKeywords = ['python', 'javascript', 'react', 'node.js', 'sql', 'machine learning', 'data analysis', 'project management', 'agile', 'scrum', 'leadership', 'communication', 'teamwork', 'problem-solving'];
+    return skillKeywords.filter(skill => text.toLowerCase().includes(skill));
+  };
+
+  const optimizeResume = () => {
+    let optimized = resume;
+
+    // Replace weak verbs with strong action verbs
+    const weakVerbs = {
+      'worked on': 'developed',
+      'responsible for': 'managed',
+      'helped': 'assisted',
+      'did': 'executed',
+    };
+
+    Object.entries(weakVerbs).forEach(([weak, strong]) => {
+      const regex = new RegExp(`\\b${weak}\\b`, 'gi');
+      optimized = optimized.replace(regex, `<span style="background-color: yellow;">${strong}</span>`);
+    });
+
+    // Highlight key skills
+    const keySkills = extractSkills(jobDescription);
+    keySkills.forEach(skill => {
+      const regex = new RegExp(`\\b${skill}\\b`, 'gi');
+      optimized = optimized.replace(regex, `<span style="background-color: yellow;">${skill}</span>`);
+    });
+
+    setOptimizedResume(optimized);
   };
 
   const generateCoverLetter = async () => {
@@ -52,18 +115,15 @@ const Index = () => {
     setError('');
 
     try {
-      // Fetch company information from the website
       const response = await axios.get(companyWebsite);
       const companyInfo = response.data;
 
-      // Extract key information from the resume, job description, and company info
       const name = extractName(resume);
       const keySkills = extractKeySkills(resume);
       const jobTitle = extractJobTitle(jobDescription);
       const companyName = extractCompanyName(companyInfo);
       const companyMission = extractCompanyMission(companyInfo);
 
-      // Generate the cover letter
       const generatedCoverLetter = `
 Dear Hiring Manager,
 
@@ -125,9 +185,65 @@ ${name}
     return `I am excited about the possibility of joining ${companyName} and would welcome the opportunity to discuss how my skills and experiences align with your needs. Thank you for your consideration, and I look forward to speaking with you soon.`;
   };
 
+  const saveResume = () => {
+    localStorage.setItem('savedResume', optimizedResume);
+    alert('Resume saved successfully!');
+  };
+
+  const loadResume = () => {
+    const savedResume = localStorage.getItem('savedResume');
+    if (savedResume) {
+      setResume(savedResume);
+      setOptimizedResume(savedResume);
+    } else {
+      alert('No saved resume found.');
+    }
+  };
+
+  const exportResume = (format) => {
+    switch (format) {
+      case 'pdf':
+        const doc = new jsPDF();
+        doc.text(optimizedResume, 10, 10);
+        doc.save("optimized_resume.pdf");
+        break;
+      case 'docx':
+        const doc2 = new Document({
+          sections: [{
+            properties: {},
+            children: [
+              new Paragraph({
+                children: [new TextRun(optimizedResume)],
+              }),
+            ],
+          }],
+        });
+        Packer.toBlob(doc2).then(blob => {
+          saveAs(blob, "optimized_resume.docx");
+        });
+        break;
+      case 'txt':
+        const blob = new Blob([optimizedResume], {type: "text/plain;charset=utf-8"});
+        saveAs(blob, "optimized_resume.txt");
+        break;
+      default:
+        alert('Invalid format selected');
+    }
+  };
+
+  const aiRewrite = () => {
+    // This is a placeholder for AI-powered rewriting
+    // In a real implementation, you'd call an AI service here
+    const rewrittenResume = resume.replace(
+      /(Worked as a |Responsible for |Helped with )/g,
+      match => `<span style="background-color: yellow;">${match.replace(/Worked as a |Responsible for |Helped with /, 'Led ')}</span>`
+    );
+    setOptimizedResume(rewrittenResume);
+  };
+
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Resume Analyzer and Cover Letter Generator</h1>
+      <h1 className="text-2xl font-bold mb-4">Advanced Resume Optimizer and Cover Letter Generator</h1>
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>Input Information</CardTitle>
@@ -165,9 +281,30 @@ ${name}
                 className="mt-1"
               />
             </div>
+            <div>
+              <label htmlFor="template" className="block text-sm font-medium text-gray-700">Resume Template</label>
+              <Select onValueChange={setSelectedTemplate}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="classic">Classic</SelectItem>
+                  <SelectItem value="modern">Modern</SelectItem>
+                  <SelectItem value="creative">Creative</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex space-x-4">
               <Button onClick={analyzeResume}>Analyze Resume</Button>
               <Button onClick={generateCoverLetter}>Generate Cover Letter</Button>
+              <Button onClick={saveResume}>Save Resume</Button>
+              <Button onClick={loadResume}>Load Resume</Button>
+              <Button onClick={aiRewrite}>AI Rewrite</Button>
+            </div>
+            <div className="flex space-x-4">
+              <Button onClick={() => exportResume('pdf')}>Export as PDF</Button>
+              <Button onClick={() => exportResume('docx')}>Export as DOCX</Button>
+              <Button onClick={() => exportResume('txt')}>Export as TXT</Button>
             </div>
           </div>
         </CardContent>
@@ -181,6 +318,22 @@ ${name}
           <CardContent>
             <p>Match Percentage: {matchPercentage}%</p>
             <p>Missing Keywords: {missingKeywords.join(', ')}</p>
+            <h3 className="font-bold mt-4">Skill Gap Analysis:</h3>
+            <ul>
+              {skillGap.map((skill, index) => (
+                <li key={index}>{skill}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+      {optimizedResume && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Optimized Resume</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div dangerouslySetInnerHTML={{ __html: optimizedResume }} />
           </CardContent>
         </Card>
       )}
