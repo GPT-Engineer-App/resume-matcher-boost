@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import axios from 'axios';
 import { jsPDF } from "jspdf";
 import { saveAs } from 'file-saver';
@@ -21,6 +22,9 @@ const Index = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [optimizedResume, setOptimizedResume] = useState('');
   const [skillGap, setSkillGap] = useState([]);
+  const [email, setEmail] = useState('');
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [downloadType, setDownloadType] = useState('');
 
   useEffect(() => {
     if (resume && jobDescription) {
@@ -241,37 +245,99 @@ ${name}
     setOptimizedResume(rewrittenResume);
   };
 
+  const handleDownload = (type) => {
+    setDownloadType(type);
+    setShowEmailDialog(true);
+  };
+
+  const downloadFile = () => {
+    if (!email) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    setShowEmailDialog(false);
+    
+    if (downloadType === 'resume') {
+      exportResume('pdf');
+    } else if (downloadType === 'coverLetter') {
+      exportCoverLetter('pdf');
+    }
+  };
+
+  const exportCoverLetter = (format) => {
+    switch (format) {
+      case 'pdf':
+        const doc = new jsPDF();
+        doc.text(coverLetter, 10, 10);
+        doc.save("cover_letter.pdf");
+        break;
+      case 'docx':
+        const doc2 = new Document({
+          sections: [{
+            properties: {},
+            children: [
+              new Paragraph({
+                children: [new TextRun(coverLetter)],
+              }),
+            ],
+          }],
+        });
+        Packer.toBlob(doc2).then(blob => {
+          saveAs(blob, "cover_letter.docx");
+        });
+        break;
+      default:
+        alert('Invalid format selected');
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Advanced Resume Optimizer and Cover Letter Generator</h1>
-      <Card className="mb-4">
+      <h1 className="text-3xl font-bold mb-6">ATS Resume Analyzer and Cover Letter Generator</h1>
+      
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>How It Works</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ol className="list-decimal list-inside space-y-2">
+            <li>Paste your resume and the job description into the provided fields.</li>
+            <li>Our AI analyzes your resume against the job requirements.</li>
+            <li>We highlight matching keywords and identify skill gaps.</li>
+            <li>Get an optimized resume and a tailored cover letter.</li>
+            <li>Download your improved documents to increase your chances of passing ATS scans.</li>
+          </ol>
+        </CardContent>
+      </Card>
+      
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle>Input Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label htmlFor="resume" className="block text-sm font-medium text-gray-700">Resume</label>
+              <label htmlFor="resume" className="block text-sm font-medium text-gray-700 mb-1">Resume</label>
               <Textarea
                 id="resume"
                 value={resume}
                 onChange={(e) => setResume(e.target.value)}
                 placeholder="Paste your resume here"
-                className="mt-1"
+                className="mt-1 h-40"
               />
             </div>
             <div>
-              <label htmlFor="jobDescription" className="block text-sm font-medium text-gray-700">Job Description</label>
+              <label htmlFor="jobDescription" className="block text-sm font-medium text-gray-700 mb-1">Job Description</label>
               <Textarea
                 id="jobDescription"
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 placeholder="Paste the job description here"
-                className="mt-1"
+                className="mt-1 h-40"
               />
             </div>
             <div>
-              <label htmlFor="companyWebsite" className="block text-sm font-medium text-gray-700">Company Website</label>
+              <label htmlFor="companyWebsite" className="block text-sm font-medium text-gray-700 mb-1">Company Website</label>
               <Input
                 id="companyWebsite"
                 type="url"
@@ -282,7 +348,7 @@ ${name}
               />
             </div>
             <div>
-              <label htmlFor="template" className="block text-sm font-medium text-gray-700">Resume Template</label>
+              <label htmlFor="template" className="block text-sm font-medium text-gray-700 mb-1">Resume Template</label>
               <Select onValueChange={setSelectedTemplate}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a template" />
@@ -294,32 +360,29 @@ ${name}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4">
               <Button onClick={analyzeResume}>Analyze Resume</Button>
               <Button onClick={generateCoverLetter}>Generate Cover Letter</Button>
               <Button onClick={saveResume}>Save Resume</Button>
               <Button onClick={loadResume}>Load Resume</Button>
               <Button onClick={aiRewrite}>AI Rewrite</Button>
             </div>
-            <div className="flex space-x-4">
-              <Button onClick={() => exportResume('pdf')}>Export as PDF</Button>
-              <Button onClick={() => exportResume('docx')}>Export as DOCX</Button>
-              <Button onClick={() => exportResume('txt')}>Export as TXT</Button>
-            </div>
           </div>
         </CardContent>
       </Card>
+      
       {error && <p className="text-red-500 mb-4">{error}</p>}
+      
       {matchPercentage !== null && (
-        <Card className="mb-4">
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>Resume Analysis Results</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>Match Percentage: {matchPercentage}%</p>
-            <p>Missing Keywords: {missingKeywords.join(', ')}</p>
-            <h3 className="font-bold mt-4">Skill Gap Analysis:</h3>
-            <ul>
+            <p className="text-xl font-semibold mb-4">Resume Matching Score: {matchPercentage}%</p>
+            <p className="mb-2">Missing Keywords: {missingKeywords.join(', ')}</p>
+            <h3 className="font-bold mt-4 mb-2">Skill Gap Analysis:</h3>
+            <ul className="list-disc list-inside">
               {skillGap.map((skill, index) => (
                 <li key={index}>{skill}</li>
               ))}
@@ -327,18 +390,21 @@ ${name}
           </CardContent>
         </Card>
       )}
+      
       {optimizedResume && (
-        <Card className="mb-4">
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>Optimized Resume</CardTitle>
           </CardHeader>
           <CardContent>
             <div dangerouslySetInnerHTML={{ __html: optimizedResume }} />
+            <Button className="mt-4" onClick={() => handleDownload('resume')}>Download Optimized Resume</Button>
           </CardContent>
         </Card>
       )}
+      
       {coverLetter && (
-        <Card>
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>Generated Cover Letter</CardTitle>
           </CardHeader>
@@ -348,9 +414,25 @@ ${name}
               readOnly
               className="mt-1 h-64"
             />
+            <Button className="mt-4" onClick={() => handleDownload('coverLetter')}>Download Cover Letter</Button>
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter your email to download</DialogTitle>
+          </DialogHeader>
+          <Input
+            type="email"
+            placeholder="your@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Button onClick={downloadFile}>Download</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
