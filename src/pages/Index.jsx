@@ -142,8 +142,47 @@ const Index = () => {
       experience: "Try to quantify your achievements and incorporate these skills: " + 
                   [...matchingSoftSkills, ...matchingTechSkills].slice(0, 3).join(", "),
       skills: "Add these missing skills to your resume if you have experience with them: " + 
-              [...missingSoftSkills, ...missingTechSkills].slice(0, 5).join(", ")
+              [...missingSoftSkills, ...missingTechSkills].slice(0, 5).join(", "),
+      structure: "Consider using bullet points to make your achievements more scannable.",
+      action_verbs: "Start each bullet point with strong action verbs like 'Implemented', 'Developed', or 'Optimized'.",
+      metrics: "Include specific metrics and numbers to demonstrate the impact of your work.",
+      tailoring: "Tailor your resume to the job description by emphasizing relevant projects and experiences.",
+      formatting: "Ensure consistent formatting throughout your resume for a professional appearance."
     });
+
+    // Function to optimize resume content
+    const optimizeResume = (content) => {
+      let optimized = content;
+  
+      // Replace generic verbs with strong action verbs
+      const verbReplacements = {
+        'Worked on': 'Spearheaded',
+        'Helped': 'Facilitated',
+        'Made': 'Developed',
+        'Did': 'Executed'
+      };
+  
+      Object.entries(verbReplacements).forEach(([weak, strong]) => {
+        const regex = new RegExp(`\\b${weak}\\b`, 'gi');
+        optimized = optimized.replace(regex, `<span class="bg-yellow-200">${strong}</span>`);
+      });
+  
+      // Add metrics and quantify achievements (placeholder example)
+      optimized = optimized.replace(
+        /Improved performance/gi,
+        '<span class="bg-yellow-200">Improved performance by 30%, resulting in a 20% increase in user engagement</span>'
+      );
+  
+      // Highlight key skills
+      [...matchingSoftSkills, ...matchingTechSkills].forEach(skill => {
+        const regex = new RegExp(`\\b${skill}\\b`, 'gi');
+        optimized = optimized.replace(regex, `<span class="bg-yellow-200">${skill}</span>`);
+      });
+  
+      return optimized;
+    };
+
+    setAdjustedResume(optimizeResume(resume));
   };
 
   const exportResume = (format) => {
@@ -293,6 +332,9 @@ const Index = () => {
                   <ScrollArea className="h-[200px] mt-2 p-4 border rounded-md">
                     <div className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: adjustedResume }} />
                   </ScrollArea>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Yellow highlights indicate optimized content and key skills relevant to the job description.
+                  </p>
                 </div>
                 <div className="mt-4 space-x-2">
                   <Button onClick={() => exportResume('txt')}>Export as TXT</Button>
