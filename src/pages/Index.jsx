@@ -1,390 +1,80 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useDropzone } from 'react-dropzone';
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+const generateCoverLetter = async () => {
+  if (!resume || !jobDescription || !companyWebsite) {
+    setError('Please provide a resume, job description, and company website to generate a cover letter.');
+    return;
+  }
+  setError('');
 
-const FileUpload = ({ onFileUpload }) => {
-  const onDrop = useCallback((acceptedFiles) => {
-    const file = acceptedFiles[0];
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      onFileUpload(e.target.result);
-    };
-    reader.readAsText(file);
-  }, [onFileUpload]);
+  try {
+    // Fetch company information from the website
+    const response = await axios.get(companyWebsite);
+    const companyInfo = response.data;
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: '.txt,.pdf,.doc,.docx' });
+    // Extract key information from the resume, job description, and company info
+    const name = extractName(resume);
+    const keySkills = extractKeySkills(resume);
+    const jobTitle = extractJobTitle(jobDescription);
+    const companyName = extractCompanyName(companyInfo);
+    const companyMission = extractCompanyMission(companyInfo);
 
-  return (
-    <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center cursor-pointer">
-      <input {...getInputProps()} />
-      {isDragActive ? (
-        <p>Drop the file here ...</p>
-      ) : (
-        <p>Drag 'n' drop a file here, or click to select a file</p>
-      )}
-    </div>
-  );
+    // Generate the cover letter
+    const generatedCoverLetter = `
+Dear Hiring Manager,
+
+I am writing to express my strong interest in the ${jobTitle} position at ${companyName}. As an experienced professional with a background in ${keySkills.join(', ')}, I am excited about the opportunity to contribute to your team and help further your mission of ${companyMission}.
+
+${generatePersonalizedParagraph(resume, jobDescription, companyInfo)}
+
+${generateSkillsAndExperienceParagraph(resume, jobDescription)}
+
+${generateClosingParagraph(companyName)}
+
+Sincerely,
+${name}
+    `;
+
+    setCoverLetter(generatedCoverLetter);
+  } catch (error) {
+    setError('Error generating cover letter. Please check the company website URL and try again.');
+  }
 };
 
-const Index = () => {
-  const [resume, setResume] = useState('');
-  const [jobDescription, setJobDescription] = useState('');
-  const [adjustedResume, setAdjustedResume] = useState('');
-  const [matchScore, setMatchScore] = useState(0);
-  const [suggestions, setSuggestions] = useState([]);
-  const [error, setError] = useState('');
-  const [keywords, setKeywords] = useState([]);
-  const [savedResumes, setSavedResumes] = useState([]);
-  const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [missingSkills, setMissingSkills] = useState([]);
-  const [aiSuggestions, setAiSuggestions] = useState({});
-
-  const handleResumeChange = (e) => setResume(e.target.value);
-  const handleJobDescriptionChange = (e) => setJobDescription(e.target.value);
-  const handleFileUpload = (content) => setResume(content);
-
-  const saveResume = () => {
-    const newSavedResume = { id: Date.now(), name: `Resume ${savedResumes.length + 1}`, content: adjustedResume };
-    setSavedResumes([...savedResumes, newSavedResume]);
-    localStorage.setItem('savedResumes', JSON.stringify([...savedResumes, newSavedResume]));
-  };
-
-  const loadResume = (id) => {
-    const loadedResume = savedResumes.find(resume => resume.id === id);
-    if (loadedResume) {
-      setResume(loadedResume.content);
-    }
-  };
-
-  useEffect(() => {
-    const storedResumes = localStorage.getItem('savedResumes');
-    if (storedResumes) {
-      setSavedResumes(JSON.parse(storedResumes));
-    }
-  }, []);
-
-  const analyzeResume = () => {
-    if (!resume || !jobDescription) {
-      setError('Please provide both a resume and a job description.');
-      return;
-    }
-    setError('');
-
-    // Define common soft skills and technical skills/tools
-    const commonSoftSkills = [
-      "communication", "teamwork", "problem-solving", "leadership", "adaptability",
-      "time management", "creativity", "critical thinking", "emotional intelligence",
-      "conflict resolution", "decision making", "flexibility", "organization"
-    ];
-
-    const commonTechnicalSkills = [
-      "javascript", "react", "node.js", "python", "java", "c++", "sql", "git",
-      "aws", "docker", "kubernetes", "machine learning", "data analysis", "agile",
-      "scrum", "devops", "ci/cd", "rest api", "graphql", "html", "css", "sass",
-      "webpack", "babel", "typescript", "vue.js", "angular", "express", "mongodb",
-      "postgresql", "mysql", "redis", "elasticsearch", "jenkins", "terraform"
-    ];
-
-    // Extract skills and tools from job description
-    const jobDescLower = jobDescription.toLowerCase();
-    const extractedSoftSkills = commonSoftSkills.filter(skill => jobDescLower.includes(skill));
-    const extractedTechSkills = commonTechnicalSkills.filter(skill => jobDescLower.includes(skill));
-
-    // Find matching skills in resume
-    const resumeLower = resume.toLowerCase();
-    const matchingSoftSkills = extractedSoftSkills.filter(skill => resumeLower.includes(skill));
-    const matchingTechSkills = extractedTechSkills.filter(skill => resumeLower.includes(skill));
-
-    setKeywords([...matchingSoftSkills, ...matchingTechSkills]);
-
-    // Highlight matching skills in resume
-    let highlightedResume = resume;
-    [...matchingSoftSkills, ...matchingTechSkills].forEach(skill => {
-      const regex = new RegExp(`\\b${skill}\\b`, 'gi');
-      highlightedResume = highlightedResume.replace(regex, match => 
-        `<span class="bg-green-200">${match}</span>`
-      );
-    });
-
-    setAdjustedResume(highlightedResume);
-
-    // Calculate match score
-    const totalSkills = extractedSoftSkills.length + extractedTechSkills.length;
-    const matchingSkills = matchingSoftSkills.length + matchingTechSkills.length;
-    setMatchScore(Math.round((matchingSkills / totalSkills) * 100));
-
-    // Identify missing skills
-    const missingSoftSkills = extractedSoftSkills.filter(skill => !resumeLower.includes(skill));
-    const missingTechSkills = extractedTechSkills.filter(skill => !resumeLower.includes(skill));
-    setMissingSkills([...missingSoftSkills, ...missingTechSkills]);
-
-    setSuggestions([
-      "Focus on adding the missing skills identified in the analysis",
-      "Quantify your achievements with specific metrics",
-      "Use action verbs to describe your experiences"
-    ]);
-
-    // AI-powered rewriting suggestions
-    setAiSuggestions({
-      summary: "Consider highlighting these key skills in your summary: " + 
-               [...matchingSoftSkills, ...matchingTechSkills].slice(0, 5).join(", "),
-      experience: "Try to quantify your achievements and incorporate these skills: " + 
-                  [...matchingSoftSkills, ...matchingTechSkills].slice(0, 3).join(", "),
-      skills: "Add these missing skills to your resume if you have experience with them: " + 
-              [...missingSoftSkills, ...missingTechSkills].slice(0, 5).join(", "),
-      structure: "Consider using bullet points to make your achievements more scannable.",
-      action_verbs: "Start each bullet point with strong action verbs like 'Implemented', 'Developed', or 'Optimized'.",
-      metrics: "Include specific metrics and numbers to demonstrate the impact of your work.",
-      tailoring: "Tailor your resume to the job description by emphasizing relevant projects and experiences.",
-      formatting: "Ensure consistent formatting throughout your resume for a professional appearance."
-    });
-
-    // Function to optimize resume content
-    const optimizeResume = (content) => {
-      let optimized = content;
-  
-      // Replace generic verbs with strong action verbs
-      const verbReplacements = {
-        'Worked on': 'Spearheaded',
-        'Helped': 'Facilitated',
-        'Made': 'Developed',
-        'Did': 'Executed'
-      };
-  
-      Object.entries(verbReplacements).forEach(([weak, strong]) => {
-        const regex = new RegExp(`\\b${weak}\\b`, 'gi');
-        optimized = optimized.replace(regex, `<span class="bg-yellow-200">${strong}</span>`);
-      });
-  
-      // Add metrics and quantify achievements (placeholder example)
-      optimized = optimized.replace(
-        /Improved performance/gi,
-        '<span class="bg-yellow-200">Improved performance by 30%, resulting in a 20% increase in user engagement</span>'
-      );
-  
-      // Highlight key skills
-      [...matchingSoftSkills, ...matchingTechSkills].forEach(skill => {
-        const regex = new RegExp(`\\b${skill}\\b`, 'gi');
-        optimized = optimized.replace(regex, `<span class="bg-yellow-200">${skill}</span>`);
-      });
-  
-      return optimized;
-    };
-
-    setAdjustedResume(optimizeResume(resume));
-  };
-
-  const exportResume = (format) => {
-    let content = adjustedResume;
-    let mimeType = 'text/plain';
-    let fileExtension = 'txt';
-
-    if (format === 'pdf') {
-      // For PDF, we'd typically use a library like jsPDF
-      // This is a placeholder for the concept
-      mimeType = 'application/pdf';
-      fileExtension = 'pdf';
-    } else if (format === 'docx') {
-      // For DOCX, we'd typically use a library like docx
-      // This is a placeholder for the concept
-      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      fileExtension = 'docx';
-    }
-
-    const blob = new Blob([content], { type: mimeType });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `optimized_resume.${fileExtension}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  return (
-    <div className="container mx-auto p-4">
-      <header className="text-center mb-8">
-        <h1 className="text-4xl font-bold mb-2">ATS-Friendly Resume Optimizer</h1>
-        <p className="text-xl text-muted-foreground">Improve your resume's chances of passing Applicant Tracking Systems</p>
-      </header>
-      
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>How It Works</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ol className="list-decimal list-inside space-y-2">
-            <li>Upload or paste your resume in the "Resume" tab.</li>
-            <li>Paste the job description in the "Job Description" tab.</li>
-            <li>Click "Analyze and Optimize" to process your resume.</li>
-            <li>Review the match score, suggestions, and optimized resume.</li>
-            <li>Use the optimized version to improve your chances with ATS systems.</li>
-          </ol>
-          <p className="mt-4 text-sm text-muted-foreground">
-            Our tool analyzes your resume against the job description, identifying key terms and suggesting improvements to increase your chances of passing Applicant Tracking Systems (ATS).
-          </p>
-        </CardContent>
-      </Card>
-
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Input</CardTitle>
-            <CardDescription>Upload or paste your resume and the job description</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="resume">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="resume">Resume</TabsTrigger>
-                <TabsTrigger value="job">Job Description</TabsTrigger>
-              </TabsList>
-              <TabsContent value="resume">
-                <div className="space-y-4">
-                  <FileUpload onFileUpload={handleFileUpload} />
-                  <Select onValueChange={setSelectedTemplate}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="chronological">Chronological</SelectItem>
-                      <SelectItem value="functional">Functional</SelectItem>
-                      <SelectItem value="combination">Combination</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Textarea
-                    placeholder="Or paste your resume here"
-                    className="min-h-[200px]"
-                    value={resume}
-                    onChange={handleResumeChange}
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent value="job">
-                <Textarea
-                  placeholder="Paste the job description here"
-                  className="min-h-[300px]"
-                  value={jobDescription}
-                  onChange={handleJobDescriptionChange}
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter>
-            <Button onClick={analyzeResume} className="w-full">Compare and Optimize</Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Results</CardTitle>
-            <CardDescription>ATS-optimized resume and suggestions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {adjustedResume ? (
-              <>
-                <div className="mb-4">
-                  <Label>Match Score</Label>
-                  <Progress value={matchScore} className="mt-2" />
-                  <p className="text-sm text-muted-foreground mt-1">{matchScore}% match with job description</p>
-                </div>
-                <div className="mb-4">
-                  <Label>Keyword Suggestions</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {keywords.map((keyword, index) => (
-                      <Badge key={index} variant="secondary">{keyword}</Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <Label>Skill Gap Analysis</Label>
-                  <ul className="list-disc list-inside text-sm text-muted-foreground mt-2">
-                    {missingSkills.map((skill, index) => (
-                      <li key={index}>Consider adding: {skill}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="mb-4">
-                  <Label>AI-Powered Improvement Suggestions</Label>
-                  <ul className="list-disc list-inside text-sm text-muted-foreground mt-2">
-                    {Object.entries(aiSuggestions).map(([section, suggestion], index) => (
-                      <li key={index}><strong>{section}:</strong> {suggestion}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <Label>Optimized Resume</Label>
-                  <ScrollArea className="h-[200px] mt-2 p-4 border rounded-md">
-                    <div className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: adjustedResume }} />
-                  </ScrollArea>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Yellow highlights indicate optimized content and key skills relevant to the job description.
-                  </p>
-                </div>
-                <div className="mt-4 space-x-2">
-                  <Button onClick={() => exportResume('txt')}>Export as TXT</Button>
-                  <Button onClick={() => exportResume('pdf')}>Export as PDF</Button>
-                  <Button onClick={() => exportResume('docx')}>Export as DOCX</Button>
-                </div>
-              </>
-            ) : (
-              <p className="text-center text-muted-foreground">Upload a resume and job description, then click "Compare and Optimize" to see results.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button className="mt-4">Save/Load Resume</Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Save or Load Resume</DialogTitle>
-            <DialogDescription>
-              Save your current resume or load a previously saved one.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input id="name" value={`Resume ${savedResumes.length + 1}`} className="col-span-3" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={saveResume}>Save Current Resume</Button>
-          </DialogFooter>
-          <div className="mt-4">
-            <Label>Saved Resumes</Label>
-            <ScrollArea className="h-[200px] w-full border rounded-md p-4">
-              {savedResumes.map((savedResume) => (
-                <div key={savedResume.id} className="flex justify-between items-center mb-2">
-                  <span>{savedResume.name}</span>
-                  <Button onClick={() => loadResume(savedResume.id)}>Load</Button>
-                </div>
-              ))}
-            </ScrollArea>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+const extractName = (resume) => {
+  // Implement logic to extract name from resume
+  return "Your Name";
 };
 
-export default Index;
+const extractKeySkills = (resume) => {
+  // Implement logic to extract key skills from resume
+  return ["skill1", "skill2", "skill3"];
+};
+
+const extractJobTitle = (jobDescription) => {
+  // Implement logic to extract job title from job description
+  return "Position Title";
+};
+
+const extractCompanyName = (companyInfo) => {
+  // Implement logic to extract company name from company info
+  return "Company Name";
+};
+
+const extractCompanyMission = (companyInfo) => {
+  // Implement logic to extract company mission from company info
+  return "company mission statement";
+};
+
+const generatePersonalizedParagraph = (resume, jobDescription, companyInfo) => {
+  // Implement logic to generate a personalized paragraph
+  return "This is a personalized paragraph based on your resume, the job description, and company information.";
+};
+
+const generateSkillsAndExperienceParagraph = (resume, jobDescription) => {
+  // Implement logic to generate a paragraph about skills and experience
+  return "This paragraph highlights your relevant skills and experience for the position.";
+};
+
+const generateClosingParagraph = (companyName) => {
+  // Implement logic to generate a closing paragraph
+  return `I am excited about the possibility of joining ${companyName} and would welcome the opportunity to discuss how my skills and experiences align with your needs. Thank you for your consideration, and I look forward to speaking with you soon.`;
+};
