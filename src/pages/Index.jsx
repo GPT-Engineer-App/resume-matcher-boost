@@ -11,6 +11,38 @@ const Index = () => {
   const [companyWebsite, setCompanyWebsite] = useState('');
   const [coverLetter, setCoverLetter] = useState('');
   const [error, setError] = useState('');
+  const [matchPercentage, setMatchPercentage] = useState(null);
+  const [missingKeywords, setMissingKeywords] = useState([]);
+
+  const analyzeResume = () => {
+    if (!resume || !jobDescription) {
+      setError('Please provide both a resume and job description for analysis.');
+      return;
+    }
+    setError('');
+
+    // Extract keywords from job description
+    const jobKeywords = extractKeywords(jobDescription);
+
+    // Extract keywords from resume
+    const resumeKeywords = extractKeywords(resume);
+
+    // Calculate match percentage
+    const matchedKeywords = jobKeywords.filter(keyword => resumeKeywords.includes(keyword));
+    const percentage = (matchedKeywords.length / jobKeywords.length) * 100;
+    setMatchPercentage(percentage.toFixed(2));
+
+    // Identify missing keywords
+    const missing = jobKeywords.filter(keyword => !resumeKeywords.includes(keyword));
+    setMissingKeywords(missing);
+  };
+
+  const extractKeywords = (text) => {
+    // Simple keyword extraction (you might want to use a more sophisticated method)
+    const words = text.toLowerCase().match(/\b(\w+)\b/g);
+    const keywords = [...new Set(words)]; // Remove duplicates
+    return keywords.filter(word => word.length > 3); // Filter out short words
+  };
 
   const generateCoverLetter = async () => {
     if (!resume || !jobDescription || !companyWebsite) {
@@ -95,7 +127,7 @@ ${name}
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Cover Letter Generator</h1>
+      <h1 className="text-2xl font-bold mb-4">Resume Analyzer and Cover Letter Generator</h1>
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>Input Information</CardTitle>
@@ -133,11 +165,25 @@ ${name}
                 className="mt-1"
               />
             </div>
-            <Button onClick={generateCoverLetter}>Generate Cover Letter</Button>
+            <div className="flex space-x-4">
+              <Button onClick={analyzeResume}>Analyze Resume</Button>
+              <Button onClick={generateCoverLetter}>Generate Cover Letter</Button>
+            </div>
           </div>
         </CardContent>
       </Card>
       {error && <p className="text-red-500 mb-4">{error}</p>}
+      {matchPercentage !== null && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Resume Analysis Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>Match Percentage: {matchPercentage}%</p>
+            <p>Missing Keywords: {missingKeywords.join(', ')}</p>
+          </CardContent>
+        </Card>
+      )}
       {coverLetter && (
         <Card>
           <CardHeader>
@@ -149,7 +195,7 @@ ${name}
               readOnly
               className="mt-1 h-64"
             />
-          </CardContent>
+          </Content>
         </Card>
       )}
     </div>
