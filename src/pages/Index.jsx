@@ -81,46 +81,68 @@ const Index = () => {
     }
     setError('');
 
-    // Extract keywords from job description
-    const jobKeywords = jobDescription.toLowerCase().match(/\b\w+\b/g) || [];
-    const uniqueJobKeywords = [...new Set(jobKeywords)];
+    // Define common soft skills and technical skills/tools
+    const commonSoftSkills = [
+      "communication", "teamwork", "problem-solving", "leadership", "adaptability",
+      "time management", "creativity", "critical thinking", "emotional intelligence",
+      "conflict resolution", "decision making", "flexibility", "organization"
+    ];
 
-    // Find matching keywords in resume
-    const matchingKeywords = uniqueJobKeywords.filter(keyword => 
-      resume.toLowerCase().includes(keyword)
-    );
+    const commonTechnicalSkills = [
+      "javascript", "react", "node.js", "python", "java", "c++", "sql", "git",
+      "aws", "docker", "kubernetes", "machine learning", "data analysis", "agile",
+      "scrum", "devops", "ci/cd", "rest api", "graphql", "html", "css", "sass",
+      "webpack", "babel", "typescript", "vue.js", "angular", "express", "mongodb",
+      "postgresql", "mysql", "redis", "elasticsearch", "jenkins", "terraform"
+    ];
 
-    setKeywords(matchingKeywords);
+    // Extract skills and tools from job description
+    const jobDescLower = jobDescription.toLowerCase();
+    const extractedSoftSkills = commonSoftSkills.filter(skill => jobDescLower.includes(skill));
+    const extractedTechSkills = commonTechnicalSkills.filter(skill => jobDescLower.includes(skill));
 
-    // Highlight matching keywords in resume
+    // Find matching skills in resume
+    const resumeLower = resume.toLowerCase();
+    const matchingSoftSkills = extractedSoftSkills.filter(skill => resumeLower.includes(skill));
+    const matchingTechSkills = extractedTechSkills.filter(skill => resumeLower.includes(skill));
+
+    setKeywords([...matchingSoftSkills, ...matchingTechSkills]);
+
+    // Highlight matching skills in resume
     let highlightedResume = resume;
-    matchingKeywords.forEach(keyword => {
-      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    [...matchingSoftSkills, ...matchingTechSkills].forEach(skill => {
+      const regex = new RegExp(`\\b${skill}\\b`, 'gi');
       highlightedResume = highlightedResume.replace(regex, match => 
         `<span class="bg-green-200">${match}</span>`
       );
     });
 
     setAdjustedResume(highlightedResume);
-    setMatchScore(Math.round((matchingKeywords.length / uniqueJobKeywords.length) * 100));
+
+    // Calculate match score
+    const totalSkills = extractedSoftSkills.length + extractedTechSkills.length;
+    const matchingSkills = matchingSoftSkills.length + matchingTechSkills.length;
+    setMatchScore(Math.round((matchingSkills / totalSkills) * 100));
 
     // Identify missing skills
-    const missingSkills = uniqueJobKeywords.filter(keyword => 
-      !resume.toLowerCase().includes(keyword)
-    );
-    setMissingSkills(missingSkills);
+    const missingSoftSkills = extractedSoftSkills.filter(skill => !resumeLower.includes(skill));
+    const missingTechSkills = extractedTechSkills.filter(skill => !resumeLower.includes(skill));
+    setMissingSkills([...missingSoftSkills, ...missingTechSkills]);
 
     setSuggestions([
-      "Add more keywords related to the job description",
+      "Focus on adding the missing skills identified in the analysis",
       "Quantify your achievements with specific metrics",
       "Use action verbs to describe your experiences"
     ]);
 
-    // AI-powered rewriting suggestions (placeholder)
+    // AI-powered rewriting suggestions
     setAiSuggestions({
-      summary: "Consider rephrasing your summary to highlight your most relevant skills.",
-      experience: "Try to quantify your achievements in each role with specific metrics.",
-      skills: "Add some of the missing skills identified in the analysis."
+      summary: "Consider highlighting these key skills in your summary: " + 
+               [...matchingSoftSkills, ...matchingTechSkills].slice(0, 5).join(", "),
+      experience: "Try to quantify your achievements and incorporate these skills: " + 
+                  [...matchingSoftSkills, ...matchingTechSkills].slice(0, 3).join(", "),
+      skills: "Add these missing skills to your resume if you have experience with them: " + 
+              [...missingSoftSkills, ...missingTechSkills].slice(0, 5).join(", ")
     });
   };
 
