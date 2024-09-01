@@ -5,12 +5,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import axios from 'axios';
 import { jsPDF } from "jspdf";
 import { saveAs } from 'file-saver';
 import { Document, Packer, Paragraph, TextRun } from "docx";
-import { FileText, FileSignature, FileSearch, BarChart2, Download, Edit } from 'lucide-react';
 
 const Index = () => {
   const [resume, setResume] = useState('');
@@ -67,7 +65,7 @@ const Index = () => {
 
     jobKeywords.forEach(keyword => {
       const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-      highlightedText = highlightedText.replace(regex, match => `<span style="background-color: lightgreen;">${match}</span>`);
+      highlightedText = highlightedText.replace(regex, match => `<span style="background-color: yellow;">${match}</span>`);
     });
 
     setHighlightedResume(highlightedText);
@@ -294,110 +292,8 @@ ${name}
   };
 
   return (
-    <>
-      <div className="flex flex-col min-h-screen">
-        <header className="bg-white border-b">
-          <div className="container mx-auto px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center">
-              <img src="/placeholder.svg" alt="Jobscan Logo" className="h-8 w-8 mr-2" />
-              <span className="text-2xl font-bold text-blue-500">Jobscan</span>
-            </div>
-            <nav>
-              <ul className="flex space-x-4">
-                <li><a href="#" className="text-gray-600 hover:text-blue-500">Dashboard</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-blue-500">LinkedIn Scan</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-blue-500">Job Tracker</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-blue-500">Scan History</a></li>
-                <li><a href="#" className="text-blue-500 font-semibold">Power Edit</a></li>
-              </ul>
-            </nav>
-            <Button className="bg-blue-500 hover:bg-blue-600">New Scan</Button>
-          </div>
-        </header>
-
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-semibold">Jobscan / Product Manager</h1>
-            <Button variant="outline" className="flex items-center">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
-          </div>
-
-          <Tabs defaultValue="resume" className="mb-6">
-            <TabsList>
-              <TabsTrigger value="resume" className="flex items-center">
-                <FileText className="w-4 h-4 mr-2" />
-                Resume
-              </TabsTrigger>
-              <TabsTrigger value="coverLetter" className="flex items-center">
-                <FileSignature className="w-4 h-4 mr-2" />
-                Cover Letter
-              </TabsTrigger>
-              <TabsTrigger value="jobDescription" className="flex items-center">
-                <FileSearch className="w-4 h-4 mr-2" />
-                Job Description
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="grid grid-cols-3 gap-6">
-            <Card className="col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="text-yellow-500 mr-2">★</span>
-                    My Resume
-                  </div>
-                  <div className="flex items-center">
-                    <span className="mr-2">Highlight all skills</span>
-                    <div className="w-12 h-6 bg-blue-500 rounded-full flex items-center justify-end p-1">
-                      <div className="w-5 h-5 bg-white rounded-full"></div>
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gray-100 p-4 rounded-lg">
-                  <h2 className="text-2xl font-bold mb-2">Jessie Smith</h2>
-                  <p className="text-gray-600 mb-4">Product Manager</p>
-                  <p className="mb-4">
-                    <span className="bg-green-200 px-2 py-1 rounded">Results-driven</span> Product Manager with over 8 years of experience in managing the product lifecycle from conception through launch. Expertise in market research, product development, and cross-functional team leadership. Proven ability to drive growth and innovation in competitive markets.
-                  </p>
-                  <h3 className="text-xl font-semibold mb-2">Work Experience</h3>
-                  {/* Add more resume content here */}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BarChart2 className="w-5 h-5 mr-2" />
-                  Match rate history
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Add match rate history chart here */}
-                <div className="flex justify-between mt-4">
-                  <Button variant="outline" className="flex items-center">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Report
-                  </Button>
-                  <Button variant="outline" className="flex items-center">
-                    <Edit className="w-4 h-4 mr-2" />
-                    Editor
-                  </Button>
-                  <Button variant="outline" className="flex items-center">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Style
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-      </div>
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-4">Resume Optimizer</h1>
       
       <Card className="mb-8">
         <CardHeader>
